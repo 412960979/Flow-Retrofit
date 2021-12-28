@@ -7,10 +7,7 @@ import com.demo.net.BuildConfig
 import com.demo.net.bean.MatchListBean
 import com.demo.net.service.BaseService
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
 open class BaseRepository @Inject constructor(private val service: BaseService) {
@@ -32,22 +29,18 @@ open class BaseRepository @Inject constructor(private val service: BaseService) 
     protected suspend fun <T> doRequest(
         request: suspend () -> Flow<Result<T>>
     ): Flow<Result<T>> {
-        return try {
-            request()
-                .flowOn(Dispatchers.IO)
-        } catch (e: Exception) {
-            if (BuildConfig.DEBUG){
-                Log.e("Network-Exception", "$e.message")
-            }
-            var code = 0
-            var msg = ""
-            handlerException(e) { errCode: Int, errMsg: String ->
-                code = errCode
-                msg = errMsg
-            }
-            flow {
-                emit(Result(code, msg, null))
-            }
-        }
+        return request()
+                .flowOn(Dispatchers.IO).catch { e ->
+                    if (BuildConfig.DEBUG) {
+                        Log.e("Network-Exception", "${e.message}")
+                    }
+                    var code = 0
+                    var msg = ""
+                    handlerException(e) { errCode: Int, errMsg: String ->
+                        code = errCode
+                        msg = errMsg
+                    }
+                    emit(Result(code, msg, null))
+                }
     }
 }
